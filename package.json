@@ -1,0 +1,20 @@
+{
+  "name": "si0027-pawii-latihan-uts",
+  "version": "1.0.0",
+  "description": "Latihan UTS PAW II - RESTful API CRUD Menu Kantin Kampus",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "test:api": "newman run postman/SI0027-PAWII-Latihan-UTS.postman_collection.json -e postman/latihan.postman_environment.json --timeout-request 5000"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-async-errors": "^3.1.1",
+    "mongoose": "^8.5.0"
+  },
+  "devDependencies": {
+    "newman": "^6.2.1"
+  }
+}

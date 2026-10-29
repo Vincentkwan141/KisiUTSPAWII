@@ -1,0 +1,1229 @@
+{
+  "info": {
+    "name": "SI0027 PAW II - Latihan UTS - Menu Kantin",
+    "description": "Koleksi pengujian otomatis Latihan UTS PAW II (RESTful API CRUD Menu Kantin Kampus).\n\nJalankan folder berurutan dari atas ke bawah (Collection Runner atau Newman) dengan environment 'Latihan UTS - Local'. Request saling berantai lewat variabel environment (kantinId, menuId, ...). Data unik dibuat otomatis pada request 1.1 sehingga collection dapat dijalankan berulang kali.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Kantin",
+      "item": [
+        {
+          "name": "1.1 Buat kantin - sukses",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/kantin",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "kantin"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nama\": \"{{kantinNama}}\",\n  \"lokasi\": \"Gedung A Lantai 1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Data unik per run supaya collection bisa dijalankan berulang kali",
+                  "const ts = Date.now();",
+                  "pm.environment.set(\"kantinNama\", \"Kantin Latihan \" + ts);",
+                  "const base = String(ts).slice(-6).padStart(6, '0');",
+                  "pm.environment.set(\"kode1\", \"MN-\" + base);",
+                  "pm.environment.set(\"kode2\", \"MN-\" + String((Number(base) + 1) % 1000000).padStart(6, \"0\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Kantin tersimpan\", function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property(\"_id\");",
+                  "  pm.expect(body.nama).to.eql(pm.environment.get(\"kantinNama\"));",
+                  "  pm.environment.set(\"kantinId\", body._id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.2 Buat kantin - nama duplikat",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/kantin",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "kantin"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nama\": \"{{kantinNama}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Body memuat properti message\", function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property(\"message\");",
+                  "  pm.expect(body.message).to.be.a(\"string\").and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.3 Daftar kantin",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/kantin",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "kantin"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Berupa array dan memuat kantin yang baru dibuat\", function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.be.an('array');",
+                  "  const ids = body.map(function (k) { return k._id; });",
+                  "  pm.expect(ids).to.include(pm.environment.get(\"kantinId\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Menu - Validasi",
+      "item": [
+        {
+          "name": "2.1 Buat menu - nama kosong",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/menu",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nama\": \"\",\n  \"kode\": \"{{kode1}}\",\n  \"bahan\": [\n    \"Beras\",\n    \"Telur\",\n    \"Bawang\"\n  ],\n  \"gizi\": {\n    \"kalori\": 450,\n    \"protein\": 15\n  },\n  \"harga\": 12000,\n  \"kantinId\": \"{{kantinId}}\",\n  \"tersedia\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Body memuat properti message\", function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property(\"message\");",
+                  "  pm.expect(body.message).to.be.a(\"string\").and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.2 Buat menu - format kode salah",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/menu",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nama\": \"Kode Salah\",\n  \"kode\": \"MN-12\",\n  \"bahan\": [\n    \"Beras\",\n    \"Telur\",\n    \"Bawang\"\n  ],\n  \"gizi\": {\n    \"kalori\": 450,\n    \"protein\": 15\n  },\n  \"harga\": 12000,\n  \"kantinId\": \"{{kantinId}}\",\n  \"tersedia\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Body memuat properti message\", function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property(\"message\");",
+                  "  pm.expect(body.message).to.be.a(\"string\").and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.3 Buat menu - harga negatif",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/menu",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nama\": \"Harga Negatif\",\n  \"kode\": \"{{kode1}}\",\n  \"bahan\": [\n    \"Beras\",\n    \"Telur\",\n    \"Bawang\"\n  ],\n  \"gizi\": {\n    \"kalori\": 450,\n    \"protein\": 15\n  },\n  \"harga\": -500,\n  \"kantinId\": \"{{kantinId}}\",\n  \"tersedia\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Body memuat properti message\", function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property(\"message\");",
+                  "  pm.expect(body.message).to.be.a(\"string\").and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.4 Buat menu - bahan kosong",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/menu",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nama\": \"Tanpa Bahan\",\n  \"kode\": \"{{kode1}}\",\n  \"bahan\": [],\n  \"gizi\": {\n    \"kalori\": 450,\n    \"protein\": 15\n  },\n  \"harga\": 12000,\n  \"kantinId\": \"{{kantinId}}\",\n  \"tersedia\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Body memuat properti message\", function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property(\"message\");",
+                  "  pm.expect(body.message).to.be.a(\"string\").and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.5 Buat menu - kalori di luar rentang",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/menu",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nama\": \"Kalori Salah\",\n  \"kode\": \"{{kode1}}\",\n  \"bahan\": [\n    \"Beras\",\n    \"Telur\",\n    \"Bawang\"\n  ],\n  \"gizi\": {\n    \"kalori\": 9000,\n    \"protein\": 10\n  },\n  \"harga\": 12000,\n  \"kantinId\": \"{{kantinId}}\",\n  \"tersedia\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Body memuat properti message\", function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property(\"message\");",
+                  "  pm.expect(body.message).to.be.a(\"string\").and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.6 Buat menu - format kantinId salah",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/menu",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nama\": \"Kantin Salah\",\n  \"kode\": \"{{kode1}}\",\n  \"bahan\": [\n    \"Beras\",\n    \"Telur\",\n    \"Bawang\"\n  ],\n  \"gizi\": {\n    \"kalori\": 450,\n    \"protein\": 15\n  },\n  \"harga\": 12000,\n  \"kantinId\": \"bukan-objectid\",\n  \"tersedia\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Body memuat properti message\", function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property(\"message\");",
+                  "  pm.expect(body.message).to.be.a(\"string\").and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Menu - CRUD",
+      "item": [
+        {
+          "name": "3.1 Buat menu #1 - sukses",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/menu",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nama\": \"Nasi Goreng Spesial\",\n  \"kode\": \"{{kode1}}\",\n  \"bahan\": [\n    \"Beras\",\n    \"Telur\",\n    \"Bawang\"\n  ],\n  \"gizi\": {\n    \"kalori\": 450,\n    \"protein\": 15\n  },\n  \"harga\": 12000,\n  \"kantinId\": \"{{kantinId}}\",\n  \"tersedia\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Menu tersimpan lengkap (embedded & referencing)\", function () {",
+                  "  const m = pm.response.json();",
+                  "  pm.expect(m).to.have.property(\"_id\");",
+                  "  pm.expect(m.nama).to.eql(\"Nasi Goreng Spesial\");",
+                  "  pm.expect(m.kode).to.eql(pm.environment.get(\"kode1\"));",
+                  "  pm.expect(m.bahan).to.eql([\"Beras\", \"Telur\", \"Bawang\"]);",
+                  "  pm.expect(m.gizi).to.include({ kalori: 450, protein: 15 });",
+                  "  pm.expect(m.kantinId).to.eql(pm.environment.get(\"kantinId\"));",
+                  "  pm.expect(m.harga).to.eql(12000);",
+                  "  pm.expect(m.tersedia).to.eql(true);",
+                  "  pm.environment.set(\"menuId\", m._id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.2 Buat menu #2 - sukses",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/menu",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nama\": \"Ayam Bakar Madu\",\n  \"kode\": \"{{kode2}}\",\n  \"bahan\": [\n    \"Beras\",\n    \"Telur\",\n    \"Bawang\"\n  ],\n  \"gizi\": {\n    \"kalori\": 450,\n    \"protein\": 15\n  },\n  \"harga\": 18000,\n  \"kantinId\": \"{{kantinId}}\",\n  \"tersedia\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Menu #2 tersimpan\", function () {",
+                  "  const m = pm.response.json();",
+                  "  pm.expect(m.nama).to.eql(\"Ayam Bakar Madu\");",
+                  "  pm.environment.set(\"menuId2\", m._id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.3 Buat menu - kode duplikat",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/menu",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nama\": \"Nama Lain\",\n  \"kode\": \"{{kode1}}\",\n  \"bahan\": [\n    \"Beras\",\n    \"Telur\",\n    \"Bawang\"\n  ],\n  \"gizi\": {\n    \"kalori\": 450,\n    \"protein\": 15\n  },\n  \"harga\": 12000,\n  \"kantinId\": \"{{kantinId}}\",\n  \"tersedia\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Body memuat properti message\", function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property(\"message\");",
+                  "  pm.expect(body.message).to.be.a(\"string\").and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.4 Detail menu - sukses (kantin ter-populate)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/menu/{{menuId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu",
+                "{{menuId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Detail menu & kantinId ter-populate\", function () {",
+                  "  const m = pm.response.json();",
+                  "  pm.expect(m._id).to.eql(pm.environment.get(\"menuId\"));",
+                  "  pm.expect(m.kantinId).to.be.an(\"object\");",
+                  "  pm.expect(m.kantinId.nama).to.eql(pm.environment.get(\"kantinNama\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.5 Detail menu - format ID tidak valid",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/menu/id-ngawur",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu",
+                "id-ngawur"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Body memuat properti message\", function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property(\"message\");",
+                  "  pm.expect(body.message).to.be.a(\"string\").and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.6 Detail menu - ID tidak ditemukan",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/menu/000000000000000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu",
+                "000000000000000000000000"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code 404\", function () { pm.response.to.have.status(404); });",
+                  "pm.test(\"Body memuat properti message\", function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property(\"message\");",
+                  "  pm.expect(body.message).to.be.a(\"string\").and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.7 Update menu - sukses",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/menu/{{menuId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu",
+                "{{menuId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"harga\": 15000,\n  \"tersedia\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Harga & ketersediaan berubah, data lain tetap\", function () {",
+                  "  const m = pm.response.json();",
+                  "  pm.expect(m.harga).to.eql(15000);",
+                  "  pm.expect(m.tersedia).to.eql(false);",
+                  "  pm.expect(m.nama).to.eql(\"Nasi Goreng Spesial\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.8 Update menu - validasi harga negatif",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/menu/{{menuId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu",
+                "{{menuId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"harga\": -1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Body memuat properti message\", function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property(\"message\");",
+                  "  pm.expect(body.message).to.be.a(\"string\").and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.9 Update menu - ID tidak ditemukan",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/menu/000000000000000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu",
+                "000000000000000000000000"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"harga\": 1000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code 404\", function () { pm.response.to.have.status(404); });",
+                  "pm.test(\"Body memuat properti message\", function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property(\"message\");",
+                  "  pm.expect(body.message).to.be.a(\"string\").and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Menu - Filter, Sorting, Pagination & Projection",
+      "item": [
+        {
+          "name": "4.1 Daftar menu - nilai default",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/menu",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Bentuk respons { data, page, limit, total }\", function () {",
+                  "  const b = pm.response.json();",
+                  "  pm.expect(b).to.have.all.keys(\"data\", \"page\", \"limit\", \"total\");",
+                  "  pm.expect(b.data).to.be.an('array');",
+                  "  pm.expect(b.page).to.eql(1);",
+                  "  pm.expect(b.limit).to.eql(10);",
+                  "  pm.expect(b.total).to.be.at.least(2);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.2 Filter berdasarkan kantinId",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/menu?kantinId={{kantinId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu"
+              ],
+              "query": [
+                {
+                  "key": "kantinId",
+                  "value": "{{kantinId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Hanya menu pada kantin tsb (total = 2)\", function () {",
+                  "  const b = pm.response.json();",
+                  "  pm.expect(b.total).to.eql(2);",
+                  "  pm.expect(b.data).to.have.lengthOf(2);",
+                  "  b.data.forEach(function (x) {",
+                  "    pm.expect(x.kantinId._id).to.eql(pm.environment.get(\"kantinId\"));",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.3 Sorting ascending berdasarkan nama",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/menu?kantinId={{kantinId}}&sort=nama",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu"
+              ],
+              "query": [
+                {
+                  "key": "kantinId",
+                  "value": "{{kantinId}}"
+                },
+                {
+                  "key": "sort",
+                  "value": "nama"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Urutan A-Z: Ayam Bakar lebih dulu dari Nasi Goreng\", function () {",
+                  "  const b = pm.response.json();",
+                  "  pm.expect(b.data[0]._id).to.eql(pm.environment.get(\"menuId2\"));",
+                  "  pm.expect(b.data[1]._id).to.eql(pm.environment.get(\"menuId\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.4 Pagination - halaman 2, limit 1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/menu?kantinId={{kantinId}}&sort=nama&page=2&limit=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu"
+              ],
+              "query": [
+                {
+                  "key": "kantinId",
+                  "value": "{{kantinId}}"
+                },
+                {
+                  "key": "sort",
+                  "value": "nama"
+                },
+                {
+                  "key": "page",
+                  "value": "2"
+                },
+                {
+                  "key": "limit",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Halaman 2 berisi 1 data (menu #1), total tetap 2\", function () {",
+                  "  const b = pm.response.json();",
+                  "  pm.expect(b.page).to.eql(2);",
+                  "  pm.expect(b.limit).to.eql(1);",
+                  "  pm.expect(b.total).to.eql(2);",
+                  "  pm.expect(b.data).to.have.lengthOf(1);",
+                  "  pm.expect(b.data[0]._id).to.eql(pm.environment.get(\"menuId\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.5 Pagination - limit dibatasi maksimum 100",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/menu?limit=1000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "1000"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"limit dikunci 100\", function () {",
+                  "  pm.expect(pm.response.json().limit).to.eql(100);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.6 Projection - hanya nama & kode",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/menu?kantinId={{kantinId}}&fields=nama,kode",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu"
+              ],
+              "query": [
+                {
+                  "key": "kantinId",
+                  "value": "{{kantinId}}"
+                },
+                {
+                  "key": "fields",
+                  "value": "nama,kode"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Field lain tidak ikut dikirim\", function () {",
+                  "  const b = pm.response.json();",
+                  "  pm.expect(b.data).to.have.lengthOf(2);",
+                  "  b.data.forEach(function (x) {",
+                  "    pm.expect(x).to.have.property(\"nama\");",
+                  "    pm.expect(x).to.have.property(\"kode\");",
+                  "    pm.expect(x).to.not.have.property(\"harga\");",
+                  "    pm.expect(x).to.not.have.property(\"bahan\");",
+                  "    pm.expect(x).to.not.have.property(\"gizi\");",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Menu - Hapus",
+      "item": [
+        {
+          "name": "5.1 Hapus menu #1 - sukses",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/menu/{{menuId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu",
+                "{{menuId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code 204\", function () { pm.response.to.have.status(204); });",
+                  "pm.test(\"Body kosong\", function () { pm.expect(pm.response.text()).to.be.empty; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.2 Detail menu yang sudah dihapus",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/menu/{{menuId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu",
+                "{{menuId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code 404\", function () { pm.response.to.have.status(404); });",
+                  "pm.test(\"Body memuat properti message\", function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property(\"message\");",
+                  "  pm.expect(body.message).to.be.a(\"string\").and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.3 Hapus menu - ID tidak ditemukan",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/menu/000000000000000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu",
+                "000000000000000000000000"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code 404\", function () { pm.response.to.have.status(404); });",
+                  "pm.test(\"Body memuat properti message\", function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property(\"message\");",
+                  "  pm.expect(body.message).to.be.a(\"string\").and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.4 Hapus menu #2 (bersih-bersih)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/menu/{{menuId2}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu",
+                "{{menuId2}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code 204\", function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
